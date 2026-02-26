@@ -44,6 +44,7 @@
     "lint:check": "pnpm exec biome lint ./src",
     "transpile": "pnpm exec tsc -p tsconfig.json",
     "test": "vitest run --dir src",
+    "test:coverage": "vitest run --dir src --coverage",
     "tsc": "tsc --noEmit",
     "watch": "tsc --watch",
     "docs:generate": "node scripts/generate-docs.mjs"

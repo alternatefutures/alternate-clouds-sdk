@@ -1,43 +1,17 @@
-name: 💍 Tester runner
+name: "\U0001F9EA Tests"
 
 on:
-  workflow_dispatch:
   push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-        
-      - uses: pnpm/action-setup@v4
-        name: Install pnpm
-        with:
-          version: 9.12.1
-          run_install: false
-
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - uses: actions/cache@v4
-        name: Setup pnpm cache
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Install
-        run: pnpm i
-
-      - name: Run tests
-        run: |
-          pnpm test
+  test:
+    uses: alternatefutures/.github/.github/workflows/test.yml@main
+    with:
+      node-version: "20"
+      pnpm-version: "9"
+    secrets:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
