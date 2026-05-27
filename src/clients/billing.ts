@@ -1,19 +1,22 @@
-// @ts-nocheck
-import { Client } from '@alternatefutures/utils-genql-client';
+/**
+ * Billing Client
+ * Handles billing operations via REST API to Auth Service
+ */
+
+import { AccessTokenService } from '../libs/AccessTokenService/AccessTokenService';
 
 // Billing types
 export type Customer = {
   id: string;
-  email: string;
-  name: string;
-  stripeCustomerId?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  email?: string;
+  name?: string;
+  createdAt: number;
 };
 
 export type PaymentMethod = {
   id: string;
   type: 'CARD' | 'CRYPTO';
+  provider?: string;
   cardBrand?: string;
   cardLast4?: string;
   cardExpMonth?: number;
@@ -21,21 +24,29 @@ export type PaymentMethod = {
   walletAddress?: string;
   blockchain?: string;
   isDefault: boolean;
-  createdAt: Date;
+  createdAt: number;
+};
+
+export type SubscriptionPlan = {
+  id: string;
+  name: 'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE';
+  basePricePerSeat: number;
+  usageMarkup: number;
+  features?: Record<string, unknown>;
 };
 
 export type Subscription = {
   id: string;
-  status: 'ACTIVE' | 'CANCELED' | 'PAST_DUE' | 'UNPAID';
+  status: 'ACTIVE' | 'CANCELED' | 'PAST_DUE' | 'UNPAID' | 'TRIALING';
   plan: 'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE';
   basePricePerSeat: number;
   usageMarkup: number;
   seats: number;
-  currentPeriodStart: Date;
-  currentPeriodEnd: Date;
-  cancelAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
+  currentPeriodStart: number;
+  currentPeriodEnd: number;
+  cancelAt?: number;
+  trialEnd?: number;
+  createdAt: number;
 };
 
 export type InvoiceLineItem = {
@@ -56,23 +67,25 @@ export type Invoice = {
   amountPaid: number;
   amountDue: number;
   currency: string;
-  periodStart: Date;
-  periodEnd: Date;
-  dueDate?: Date;
-  paidAt?: Date;
+  periodStart?: number;
+  periodEnd?: number;
+  dueDate?: number;
+  paidAt?: number;
   pdfUrl?: string;
   lineItems?: InvoiceLineItem[];
-  createdAt: Date;
+  createdAt: number;
 };
 
 export type Payment = {
   id: string;
+  invoiceId?: string;
   amount: number;
   currency: string;
   status: 'PENDING' | 'SUCCEEDED' | 'FAILED';
+  provider?: string;
   txHash?: string;
   blockchain?: string;
-  createdAt: Date;
+  createdAt: number;
 };
 
 export type UsageMetric = {
@@ -80,442 +93,433 @@ export type UsageMetric = {
   amount: number;
 };
 
-export type UsageRecord = {
+export type CurrentUsage = {
   storage: UsageMetric;
   bandwidth: UsageMetric;
   compute: UsageMetric;
   requests: UsageMetric;
+  total: number;
+  periodStart?: number;
+  periodEnd?: number;
 };
 
-export type CurrentUsage = UsageRecord & {
-  total: number;
+export type UsageRecord = {
+  id: string;
+  metricType: 'storage' | 'bandwidth' | 'compute' | 'requests';
+  quantity: number;
+  unitPrice: number;
+  amount: number;
+  periodStart: number;
+  periodEnd: number;
+  recordedAt: number;
+  createdAt: number;
+};
+
+// Connect types
+export type ConnectedAccount = {
+  id: string;
+  provider: 'stripe' | 'stax';
+  accountType: 'standard' | 'express' | 'custom';
+  email?: string;
+  businessName?: string;
+  country?: string;
+  chargesEnabled: boolean;
+  payoutsEnabled: boolean;
+  detailsSubmitted: boolean;
+  createdAt: number;
+};
+
+export type Transfer = {
+  id: string;
+  connectedAccountId: string;
+  amount: number;
+  currency: string;
+  status: 'pending' | 'paid' | 'failed' | 'canceled';
+  description?: string;
+  createdAt: number;
+};
+
+export type CryptoPaymentRequest = {
+  id: string;
+  status: 'PENDING';
+  amount: number;
+  currency: string;
+  depositAddress: string;
+  chainId: number;
+  tokenAddress?: string;
+  tokenSymbol: string;
+  expiresAt: number;
 };
 
 type BillingClientOptions = {
-  graphqlClient: Client;
+  authServiceUrl: string;
+  accessTokenService: AccessTokenService;
 };
 
 export class BillingClient {
-  private graphqlClient: Client;
+  private authServiceUrl: string;
+  private accessTokenService: AccessTokenService;
 
   constructor(options: BillingClientOptions) {
-    this.graphqlClient = options.graphqlClient;
+    this.authServiceUrl = options.authServiceUrl.replace(/\/$/, '');
+    this.accessTokenService = options.accessTokenService;
   }
 
-  /**
-   * Get customer information
-   */
-  public getCustomer = async () => {
-    const response = await this.graphqlClient.query({
-      __name: 'GetCustomer',
-      customer: {
-        id: true,
-        email: true,
-        name: true,
-        stripeCustomerId: true,
-        createdAt: true,
-        updatedAt: true,
+  private async fetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+    const accessToken = await this.accessTokenService.getAccessToken();
+
+    const response = await fetch(`${this.authServiceUrl}${path}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        ...options.headers,
       },
     });
 
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ error: 'Request failed' }));
+      throw new Error(error.error || `HTTP ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  // ============================================
+  // Customer
+  // ============================================
+
+  public getCustomer = async (): Promise<Customer | null> => {
+    const response = await this.fetch<{ customer: Customer }>('/billing/customer');
     return response.customer;
   };
 
-  /**
-   * List payment methods
-   */
-  public listPaymentMethods = async () => {
-    const response = await this.graphqlClient.query({
-      __name: 'ListPaymentMethods',
-      paymentMethods: {
-        id: true,
-        type: true,
-        cardBrand: true,
-        cardLast4: true,
-        cardExpMonth: true,
-        cardExpYear: true,
-        walletAddress: true,
-        blockchain: true,
-        isDefault: true,
-        createdAt: true,
-      },
+  public updateCustomer = async (data: { email?: string; name?: string }): Promise<Customer> => {
+    const response = await this.fetch<{ customer: Customer }>('/billing/customer', {
+      method: 'POST',
+      body: JSON.stringify(data),
     });
+    return response.customer;
+  };
 
+  // ============================================
+  // Payment Methods
+  // ============================================
+
+  public listPaymentMethods = async (): Promise<PaymentMethod[]> => {
+    const response = await this.fetch<{ paymentMethods: PaymentMethod[] }>('/billing/payment-methods');
     return response.paymentMethods;
   };
 
-  /**
-   * Add a payment method
-   */
   public addPaymentMethod = async (input: {
-    stripePaymentMethodId?: string;
+    paymentMethodId?: string;
     walletAddress?: string;
     blockchain?: string;
-    setAsDefault?: boolean;
-  }) => {
-    const response = await this.graphqlClient.mutation({
-      __name: 'AddPaymentMethod',
-      addPaymentMethod: {
-        __args: {
-          input,
-        },
-        id: true,
-        type: true,
-        cardBrand: true,
-        cardLast4: true,
-        walletAddress: true,
-        blockchain: true,
-        isDefault: true,
-      },
-    });
-
-    return response.addPaymentMethod;
+    provider?: 'stripe' | 'stax';
+    setDefault?: boolean;
+  }): Promise<PaymentMethod> => {
+    if (input.walletAddress) {
+      // Crypto wallet
+      const response = await this.fetch<{ paymentMethod: PaymentMethod }>('/billing/payment-methods/crypto', {
+        method: 'POST',
+        body: JSON.stringify({
+          walletAddress: input.walletAddress,
+          blockchain: input.blockchain,
+          setDefault: input.setDefault,
+        }),
+      });
+      return response.paymentMethod;
+    } else {
+      // Card
+      const response = await this.fetch<{ paymentMethod: PaymentMethod }>('/billing/payment-methods/card', {
+        method: 'POST',
+        body: JSON.stringify({
+          paymentMethodId: input.paymentMethodId,
+          provider: input.provider || 'stripe',
+          setDefault: input.setDefault,
+        }),
+      });
+      return response.paymentMethod;
+    }
   };
 
-  /**
-   * Remove a payment method
-   */
-  public removePaymentMethod = async ({ id }: { id: string }) => {
-    const response = await this.graphqlClient.mutation({
-      __name: 'RemovePaymentMethod',
-      removePaymentMethod: {
-        __args: {
-          id,
-        },
-        __scalar: true,
-      },
+  public removePaymentMethod = async ({ id }: { id: string }): Promise<boolean> => {
+    await this.fetch<{ success: boolean }>(`/billing/payment-methods/${id}`, {
+      method: 'DELETE',
     });
-
-    return response.removePaymentMethod;
+    return true;
   };
 
-  /**
-   * Set default payment method
-   */
-  public setDefaultPaymentMethod = async ({ id }: { id: string }) => {
-    const response = await this.graphqlClient.mutation({
-      __name: 'SetDefaultPaymentMethod',
-      setDefaultPaymentMethod: {
-        __args: {
-          id,
-        },
-        id: true,
-        isDefault: true,
-      },
+  public setDefaultPaymentMethod = async ({ id }: { id: string }): Promise<boolean> => {
+    await this.fetch<{ success: boolean }>(`/billing/payment-methods/${id}/default`, {
+      method: 'PUT',
     });
-
-    return response.setDefaultPaymentMethod;
+    return true;
   };
 
-  /**
-   * List subscriptions
-   */
-  public listSubscriptions = async () => {
-    const response = await this.graphqlClient.query({
-      __name: 'ListSubscriptions',
-      subscriptions: {
-        id: true,
-        status: true,
-        plan: true,
-        basePricePerSeat: true,
-        usageMarkup: true,
-        seats: true,
-        currentPeriodStart: true,
-        currentPeriodEnd: true,
-        cancelAt: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+  // ============================================
+  // Subscriptions
+  // ============================================
 
+  public listSubscriptions = async (): Promise<Subscription[]> => {
+    const response = await this.fetch<{ subscriptions: Subscription[] }>('/billing/subscriptions');
     return response.subscriptions;
   };
 
-  /**
-   * Get active subscription
-   */
-  public getActiveSubscription = async () => {
-    const response = await this.graphqlClient.query({
-      __name: 'GetActiveSubscription',
-      activeSubscription: {
-        id: true,
-        status: true,
-        plan: true,
-        basePricePerSeat: true,
-        usageMarkup: true,
-        seats: true,
-        currentPeriodStart: true,
-        currentPeriodEnd: true,
-        cancelAt: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
-
-    return response.activeSubscription;
+  public getActiveSubscription = async (): Promise<Subscription | null> => {
+    const response = await this.fetch<{ subscription: Subscription | null }>('/billing/subscriptions/active');
+    return response.subscription;
   };
 
-  /**
-   * Create a subscription
-   */
+  public getSubscriptionPlans = async (): Promise<SubscriptionPlan[]> => {
+    const response = await this.fetch<{ plans: SubscriptionPlan[] }>('/billing/subscriptions/plans');
+    return response.plans;
+  };
+
   public createSubscription = async (input: {
-    plan: 'FREE' | 'STARTER' | 'PRO' | 'ENTERPRISE';
+    planId: string;
     seats?: number;
-  }) => {
-    const response = await this.graphqlClient.mutation({
-      __name: 'CreateSubscription',
-      createSubscription: {
-        __args: {
-          input,
-        },
-        id: true,
-        status: true,
-        plan: true,
-        seats: true,
-        basePricePerSeat: true,
-        usageMarkup: true,
-        currentPeriodStart: true,
-        currentPeriodEnd: true,
-      },
+    paymentMethodId?: string;
+  }): Promise<Subscription> => {
+    const response = await this.fetch<{ subscription: Subscription }>('/billing/subscriptions', {
+      method: 'POST',
+      body: JSON.stringify(input),
     });
-
-    return response.createSubscription;
+    return response.subscription;
   };
 
-  /**
-   * Cancel a subscription
-   */
   public cancelSubscription = async ({
     id,
     immediately = false,
   }: {
     id: string;
     immediately?: boolean;
-  }) => {
-    const response = await this.graphqlClient.mutation({
-      __name: 'CancelSubscription',
-      cancelSubscription: {
-        __args: {
-          id,
-          immediately,
-        },
-        id: true,
-        status: true,
-        cancelAt: true,
-      },
+  }): Promise<Subscription> => {
+    const response = await this.fetch<{ subscription: Subscription }>(`/billing/subscriptions/${id}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ immediately }),
     });
-
-    return response.cancelSubscription;
+    return response.subscription;
   };
 
-  /**
-   * Update subscription seats
-   */
   public updateSubscriptionSeats = async ({
     id,
     seats,
   }: {
     id: string;
     seats: number;
-  }) => {
-    const response = await this.graphqlClient.mutation({
-      __name: 'UpdateSubscriptionSeats',
-      updateSubscriptionSeats: {
-        __args: {
-          id,
-          seats,
-        },
-        id: true,
-        seats: true,
-      },
+  }): Promise<Subscription> => {
+    const response = await this.fetch<{ subscription: Subscription }>(`/billing/subscriptions/${id}/seats`, {
+      method: 'PUT',
+      body: JSON.stringify({ seats }),
     });
-
-    return response.updateSubscriptionSeats;
+    return response.subscription;
   };
 
-  /**
-   * List invoices
-   */
+  // ============================================
+  // Invoices
+  // ============================================
+
   public listInvoices = async ({
     status,
     limit = 50,
   }: {
     status?: string;
     limit?: number;
-  } = {}) => {
-    const response = await this.graphqlClient.query({
-      __name: 'ListInvoices',
-      invoices: {
-        __args: {
-          status,
-          limit,
-        },
-        id: true,
-        invoiceNumber: true,
-        status: true,
-        subtotal: true,
-        tax: true,
-        total: true,
-        amountPaid: true,
-        amountDue: true,
-        currency: true,
-        periodStart: true,
-        periodEnd: true,
-        dueDate: true,
-        paidAt: true,
-        pdfUrl: true,
-        createdAt: true,
-      },
-    });
+  } = {}): Promise<Invoice[]> => {
+    const params = new URLSearchParams();
+    if (status) params.set('status', status);
+    if (limit) params.set('limit', limit.toString());
 
+    const response = await this.fetch<{ invoices: Invoice[] }>(`/billing/invoices?${params}`);
     return response.invoices;
   };
 
-  /**
-   * Get invoice by ID
-   */
-  public getInvoice = async ({ id }: { id: string }) => {
-    const response = await this.graphqlClient.query({
-      __name: 'GetInvoice',
-      invoice: {
-        __args: {
-          id,
-        },
-        id: true,
-        invoiceNumber: true,
-        status: true,
-        subtotal: true,
-        tax: true,
-        total: true,
-        amountPaid: true,
-        amountDue: true,
-        currency: true,
-        periodStart: true,
-        periodEnd: true,
-        dueDate: true,
-        paidAt: true,
-        pdfUrl: true,
-        lineItems: {
-          id: true,
-          description: true,
-          quantity: true,
-          unitPrice: true,
-          amount: true,
-        },
-        createdAt: true,
-      },
-    });
-
+  public getInvoice = async ({ id }: { id: string }): Promise<Invoice | null> => {
+    const response = await this.fetch<{ invoice: Invoice }>(`/billing/invoices/${id}`);
     return response.invoice;
   };
 
-  /**
-   * Get current usage
-   */
-  public getCurrentUsage = async () => {
-    const response = await this.graphqlClient.query({
-      __name: 'GetCurrentUsage',
-      currentUsage: {
-        storage: {
-          quantity: true,
-          amount: true,
-        },
-        bandwidth: {
-          quantity: true,
-          amount: true,
-        },
-        compute: {
-          quantity: true,
-          amount: true,
-        },
-        requests: {
-          quantity: true,
-          amount: true,
-        },
-        total: true,
-      },
+  public generateInvoice = async (): Promise<Invoice> => {
+    const response = await this.fetch<{ invoice: Invoice }>('/billing/invoices/generate', {
+      method: 'POST',
     });
-
-    return response.currentUsage;
+    return response.invoice;
   };
 
-  /**
-   * Process a payment
-   */
+  // ============================================
+  // Usage
+  // ============================================
+
+  public getCurrentUsage = async (): Promise<CurrentUsage | null> => {
+    const response = await this.fetch<{ usage: CurrentUsage }>('/billing/usage/current');
+    return response.usage;
+  };
+
+  public getUsageHistory = async (limit = 100): Promise<UsageRecord[]> => {
+    const response = await this.fetch<{ records: UsageRecord[] }>(`/billing/usage/history?limit=${limit}`);
+    return response.records;
+  };
+
+  public recordUsage = async (input: {
+    metricType: 'storage' | 'bandwidth' | 'compute' | 'requests';
+    quantity: number;
+    timestamp?: number;
+  }): Promise<UsageRecord> => {
+    const response = await this.fetch<{ record: UsageRecord }>('/billing/usage/record', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+    return response.record;
+  };
+
+  // ============================================
+  // Payments
+  // ============================================
+
+  public listPayments = async (limit = 50): Promise<Payment[]> => {
+    const response = await this.fetch<{ payments: Payment[] }>(`/billing/payments?limit=${limit}`);
+    return response.payments;
+  };
+
   public processPayment = async ({
-    amount,
-    currency = 'usd',
     invoiceId,
+    paymentMethodId,
+    amount,
   }: {
-    amount: number;
-    currency?: string;
-    invoiceId?: string;
-  }) => {
-    const response = await this.graphqlClient.mutation({
-      __name: 'ProcessPayment',
-      processPayment: {
-        __args: {
-          amount,
-          currency,
-          invoiceId,
-        },
-        id: true,
-        amount: true,
-        currency: true,
-        status: true,
-        createdAt: true,
-      },
+    invoiceId: string;
+    paymentMethodId?: string;
+    amount?: number;
+  }): Promise<Payment & { clientSecret?: string }> => {
+    const response = await this.fetch<{ payment: Payment; clientSecret?: string }>('/billing/payments', {
+      method: 'POST',
+      body: JSON.stringify({ invoiceId, paymentMethodId, amount }),
     });
-
-    return response.processPayment;
+    const result: Payment & { clientSecret?: string } = { ...response.payment };
+    if (response.clientSecret) {
+      result.clientSecret = response.clientSecret;
+    }
+    return result;
   };
 
-  /**
-   * Record a crypto payment
-   */
+  public createCryptoPayment = async ({
+    invoiceId,
+    chainId = 1,
+    tokenSymbol = 'usdc',
+  }: {
+    invoiceId: string;
+    chainId?: number;
+    tokenSymbol?: string;
+  }): Promise<CryptoPaymentRequest> => {
+    const response = await this.fetch<{ payment: CryptoPaymentRequest }>('/billing/payments/crypto/create', {
+      method: 'POST',
+      body: JSON.stringify({ invoiceId, chainId, tokenSymbol }),
+    });
+    return response.payment;
+  };
+
   public recordCryptoPayment = async (input: {
+    invoiceId: string;
     txHash: string;
     blockchain: string;
+    fromAddress: string;
     amount: number;
-    invoiceId?: string;
-  }) => {
-    const response = await this.graphqlClient.mutation({
-      __name: 'RecordCryptoPayment',
-      recordCryptoPayment: {
-        __args: {
-          input,
-        },
-        id: true,
-        amount: true,
-        currency: true,
-        status: true,
-        txHash: true,
-        blockchain: true,
-        createdAt: true,
-      },
+  }): Promise<Payment> => {
+    const response = await this.fetch<{ payment: Payment }>('/billing/payments/crypto/record', {
+      method: 'POST',
+      body: JSON.stringify(input),
     });
-
-    return response.recordCryptoPayment;
+    return response.payment;
   };
 
-  /**
-   * Generate invoice
-   */
-  public generateInvoice = async ({ subscriptionId }: { subscriptionId: string }) => {
-    const response = await this.graphqlClient.mutation({
-      __name: 'GenerateInvoice',
-      generateInvoice: {
-        __args: {
-          subscriptionId,
-        },
-        id: true,
-        invoiceNumber: true,
-        status: true,
-        total: true,
-        dueDate: true,
-      },
-    });
+  // ============================================
+  // Connect (Marketplace/Platform)
+  // ============================================
 
-    return response.generateInvoice;
+  public listConnectedAccounts = async (): Promise<ConnectedAccount[]> => {
+    const response = await this.fetch<{ accounts: ConnectedAccount[] }>('/billing/connect/accounts');
+    return response.accounts;
+  };
+
+  public createConnectedAccount = async (input: {
+    provider?: 'stripe' | 'stax';
+    email: string;
+    businessName?: string;
+    country?: string;
+    accountType?: 'standard' | 'express' | 'custom';
+  }): Promise<ConnectedAccount> => {
+    const response = await this.fetch<{ account: ConnectedAccount }>('/billing/connect/accounts', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+    return response.account;
+  };
+
+  public getConnectedAccount = async (id: string): Promise<ConnectedAccount | null> => {
+    const response = await this.fetch<{ account: ConnectedAccount }>(`/billing/connect/accounts/${id}`);
+    return response.account;
+  };
+
+  public createOnboardingLink = async ({
+    accountId,
+    returnUrl,
+    refreshUrl,
+  }: {
+    accountId: string;
+    returnUrl: string;
+    refreshUrl: string;
+  }): Promise<{ url: string; expiresAt: number }> => {
+    const response = await this.fetch<{ url: string; expiresAt: number }>(
+      `/billing/connect/accounts/${accountId}/onboarding-link`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ returnUrl, refreshUrl }),
+      }
+    );
+    return response;
+  };
+
+  public createDashboardLink = async (accountId: string): Promise<{ url: string }> => {
+    const response = await this.fetch<{ url: string }>(`/billing/connect/accounts/${accountId}/dashboard-link`, {
+      method: 'POST',
+    });
+    return response;
+  };
+
+  public deleteConnectedAccount = async (id: string): Promise<boolean> => {
+    await this.fetch<{ success: boolean }>(`/billing/connect/accounts/${id}`, {
+      method: 'DELETE',
+    });
+    return true;
+  };
+
+  public listTransfers = async (connectedAccountId?: string, limit = 50): Promise<Transfer[]> => {
+    const params = new URLSearchParams();
+    if (connectedAccountId) params.set('connectedAccountId', connectedAccountId);
+    if (limit) params.set('limit', limit.toString());
+
+    const response = await this.fetch<{ transfers: Transfer[] }>(`/billing/connect/transfers?${params}`);
+    return response.transfers;
+  };
+
+  public createTransfer = async (input: {
+    connectedAccountId: string;
+    amount: number;
+    currency?: string;
+    description?: string;
+    sourcePaymentId?: string;
+  }): Promise<Transfer> => {
+    const response = await this.fetch<{ transfer: Transfer }>('/billing/connect/transfers', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+    return response.transfer;
+  };
+
+  public getPlatformBalance = async (): Promise<Array<{ available: number; pending: number; currency: string }>> => {
+    const response = await this.fetch<{ balances: Array<{ available: number; pending: number; currency: string }> }>(
+      '/billing/connect/balance'
+    );
+    return response.balances;
   };
 }

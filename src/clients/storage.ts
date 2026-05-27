@@ -312,10 +312,13 @@ export class StorageClient {
       },
     });
 
-    const pin: StoragePin = response.pins.data[0];
-
     if (!isPinsResponseQuery(response.pins?.data)) {
-      throw new PinNotFoundError({ pin: { cid: pin.cid } });
+      throw new PinNotFoundError({ pin: { cid: 'unknown' } });
+    }
+
+    const pin = response.pins.data[0];
+    if (!pin) {
+      throw new PinNotFoundError({ pin: { cid: 'unknown' } });
     }
 
     return await Promise.all(

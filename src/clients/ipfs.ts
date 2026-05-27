@@ -173,7 +173,11 @@ export class IpfsClient {
 
     if (!stat.isDirectory()) {
       const fileFromPath = await filesFromPaths([path]);
-      const getStream = () => UnixFS.createFileEncoderStream(fileFromPath[0]);
+      const file = fileFromPath[0];
+      if (!file) {
+        throw new Error(`Failed to read file: ${path}`);
+      }
+      const getStream = () => UnixFS.createFileEncoderStream(file);
 
       const { pin } = await this.uploadProxyClient.uploadContent({
         getStream,

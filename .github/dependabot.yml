@@ -1,7 +1,39 @@
 version: 2
 
 updates:
-  # npm dependencies
+  # Security updates - Daily checks for security patches
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+      time: "09:00"
+      timezone: "UTC"
+    target-branch: "develop"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "alternatefutures/core-team"
+    assignees:
+      - "alternatefutures/core-team"
+    labels:
+      - "dependencies"
+      - "security"
+      - "automated"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    versioning-strategy: increase-if-necessary
+    rebase-strategy: "auto"
+    pull-request-branch-name:
+      separator: "/"
+    groups:
+      security-updates:
+        patterns:
+          - "*"
+        update-types:
+          - "security"
+
+  # npm dependencies - Weekly regular updates
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
@@ -9,6 +41,7 @@ updates:
       day: "monday"
       time: "09:00"
       timezone: "UTC"
+    target-branch: "develop"
     open-pull-requests-limit: 10
     reviewers:
       - "alternatefutures/core-team"
@@ -21,25 +54,96 @@ updates:
       prefix: "chore"
       prefix-development: "chore"
       include: "scope"
-    # Security updates
     versioning-strategy: increase-if-necessary
+    rebase-strategy: "auto"
+    pull-request-branch-name:
+      separator: "/"
     # Group updates to reduce PR noise
     groups:
+      # TypeScript type definitions
+      type-definitions:
+        patterns:
+          - "@types/*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # Build and dev tools
+      build-tools:
+        patterns:
+          - "typescript"
+          - "esbuild*"
+          - "@biomejs/*"
+          - "vitest"
+          - "@vitest/*"
+          - "bun"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # Internal AlternateFutures packages
+      internal-packages:
+        patterns:
+          - "@alternatefutures/*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # Documentation tools
+      docs-tools:
+        patterns:
+          - "typedoc*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # Production dependencies (remaining)
       production-dependencies:
         dependency-type: "production"
         update-types:
           - "minor"
           - "patch"
+        exclude-patterns:
+          - "@alternatefutures/*"
+
+      # Development dependencies (remaining)
       development-dependencies:
         dependency-type: "development"
         update-types:
           - "minor"
           - "patch"
-    # Ignore specific packages if needed
+        exclude-patterns:
+          - "@types/*"
+          - "typescript"
+          - "esbuild*"
+          - "@biomejs/*"
+          - "vitest"
+          - "@vitest/*"
+          - "bun"
+          - "typedoc*"
+          - "@alternatefutures/*"
+
+      # Major updates - production
+      major-production:
+        dependency-type: "production"
+        update-types:
+          - "major"
+        exclude-patterns:
+          - "@alternatefutures/*"
+
+      # Major updates - development
+      major-development:
+        dependency-type: "development"
+        update-types:
+          - "major"
+        exclude-patterns:
+          - "@alternatefutures/*"
+
+    # Ignore specific packages
     ignore:
-      # Example: ignore major version updates for stable packages
-      # - dependency-name: "package-name"
-      #   update-types: ["version-update:semver-major"]
+      # Manage internal packages manually
+      - dependency-name: "@alternatefutures/*"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
@@ -49,6 +153,7 @@ updates:
       day: "monday"
       time: "09:00"
       timezone: "UTC"
+    target-branch: "develop"
     open-pull-requests-limit: 5
     reviewers:
       - "alternatefutures/core-team"
@@ -59,3 +164,6 @@ updates:
     commit-message:
       prefix: "ci"
       include: "scope"
+    rebase-strategy: "auto"
+    pull-request-branch-name:
+      separator: "/"
