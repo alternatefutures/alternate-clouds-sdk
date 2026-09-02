@@ -11,9 +11,15 @@ type BuildHandlerArgs = Pick<BuildOptions, "bundle" | "platform" | "target" | "o
 
 const define = parseEnvVarsAsKeyVal<Defined>({ defined });
 
-const external = [
-  ...Object.keys(pkgJson.dependencies),
-];
+// Internal @alternatefutures/* packages are published without a compiled `dist`
+// (they ship TypeScript sources but declare `main: ./dist/index.js`), so leaving
+// them external emits a bare require() that cannot resolve at runtime. Bundle
+// them from source instead. See issue #20.
+const INTERNAL_SCOPE = '@alternatefutures/';
+
+const external = Object.keys(pkgJson.dependencies).filter(
+  (dep) => !dep.startsWith(INTERNAL_SCOPE),
+);
 
 const requiredBuilds: BuildHandlerArgs[] = [
   {
