@@ -10,7 +10,7 @@ The Alternate Futures Cloud SDK provides an unified interface to help you quickl
 * ESM module for Web browser
 * CJS module for Node.js 
 
-Detailed example and API documentation can are [here](https://docs.alternatefutures.ai/).
+Detailed example and API documentation can be found [here](https://docs.alternatefutures.ai/).
 
 ## Overview
 
@@ -19,7 +19,7 @@ Detailed example and API documentation can are [here](https://docs.alternatefutu
   - [Code format](#code-format)
   - [Changeset](#changeset)
 * [🧸 Basic Usage](#basic-usage)
-* [📖 Docs](https://alternatefutures.ai/docs/sdk)
+* [📖 Docs](https://docs.alternatefutures.ai/sdk)
 * [🙏 Contributing](#contributing)
   - [Branching strategy](#branching-strategy)
   - [Contributing](#conventional-commits)
@@ -41,32 +41,33 @@ npm i @alternatefutures/sdk
 
 ⚠️ If you're planning to contribute as a developer, you must install [pnpm](https://pnpm.io), otherwise most commands will fail.
 
-For a quick start, learn the [basic usage](#basic-usage), or alternatively visit our [documentation](https://alternatefutures.ai/docs/sdk)
+For a quick start, learn the [basic usage](#basic-usage), or alternatively visit our [documentation](https://docs.alternatefutures.ai/sdk)
 
 ## Development
 
-For developers looking to contribute to the `@alternatefutures/sdk`, [clone](https://github.com/alternatefutures/package-cloud-sdk) the repository and follow the [contribution guide](#contributing).
+For developers looking to contribute to the `@alternatefutures/sdk`, [clone](https://github.com/alternatefutures/alternate-clouds-sdk) the repository and follow the [contribution guide](#contributing).
 
 Once cloned, you'll have to set up the local development environment, e.g. to have access to the source-code, iterate, run tests and much more.
 
 For runtime we utilize [Nodejs](https://nodejs.org/en/download) and [PNPM](https://pnpm.io/installation) as the package manager.
 
-Create a new file named .env in the root directory of your project. This file will store environment variables needed for local development.
+The build inlines a set of service URLs at compile time. All five variables below are
+required — `src/defined.ts` throws `EnvNotSetError` and the build aborts if any is missing.
+
+⚠️ These must be **exported into your shell environment**. The build reads `process.env`
+directly and does not load a `.env` file, so creating one has no effect.
 
 ```sh
-touch .env.production
+export SDK__AUTH_APPS_URL="https://auth-apps.service.alternatefutures.ai"
+export SDK__IPFS__STORAGE_API_URL="https://storage-ipfs.service.alternatefutures.ai"
+export SDK__GRAPHQL_API_URL="https://graphql.service.alternatefutures.ai/graphql"
+export SDK__UPLOAD_PROXY_API_URL="https://uploads.service.alternatefutures.ai"
+export SDK__AUTH_SERVICE_URL="<ask a maintainer>"
 ```
 
-Open the .env.production file in a text editor and add the following:
-
-```sh
-SDK__AUTH_APPS_URL="https://auth-apps.service.alternatefutures.ai"
-SDK__IPFS__STORAGE_API_URL="https://storage-ipfs.service.alternatefutures.ai"
-SDK__GRAPHQL_API_URL="https://graphql.service.alternatefutures.ai/graphql"
-SDK__UPLOAD_PROXY_API_URL="https://uploads.service.alternatefutures.ai"
-```
-
-💡 The variables above point to our production environment, the same you interact with as an end-user.
+💡 The first four point to our production environment, the same one you interact with as
+an end-user. `SDK__AUTH_SERVICE_URL` is required by the build but its production value is
+not yet documented here — see [issue #20](https://github.com/alternatefutures/alternate-clouds-sdk/issues/20).
 
 Next, install the project dependencies:
 
@@ -74,7 +75,7 @@ Next, install the project dependencies:
 pnpm i
 ```
 
-Learn the Alternate Futures SDK basic usage [here](#basic-usage). For extended documentation visit our [documentation site](https://alternatefutures.ai/docs/sdk).
+Learn the Alternate Futures SDK basic usage [here](#basic-usage). For extended documentation visit our [documentation site](https://docs.alternatefutures.ai/sdk).
 
 ### Code Format
 
@@ -128,7 +129,7 @@ pnpm changeset:add
 
 The following provides a basic example of how to import the web browser or node SDK versions into your project and run a few simple commands.
 
-For a complete description, read our documentation [here](https://alternatefutures.ai/docs/sdk).
+For a complete description, read our documentation [here](https://docs.alternatefutures.ai/sdk).
 
 ### Browser
 
@@ -149,7 +150,7 @@ Alternatively, omit the `/browser` path, as it'll default to the web version due
 import { AlternateFuturesSdk } from '@alternatefutures/sdk';
 ```
 
-💡The `<PERSONAL_ACCESS_TOKEN>` can be obtained by utilizing the `@alternatefutures/cli`, learn more about it [here](https://alternatefutures.ai/docs/cli).
+💡The `<PERSONAL_ACCESS_TOKEN>` can be obtained by utilizing the `@alternatefutures/acc`, learn more about it [here](https://docs.alternatefutures.ai/cli).
 
 ### NodeJs
 
@@ -190,7 +191,7 @@ const sdk = new AlternateFuturesSdk({
 
 This section guides you through the process of contributing to our open-source project. From creating a feature branch to submitting a pull request, get started by:
 
-1. Fork the project [here](https://github.com/alternatefutures/package-cloud-sdk)
+1. Fork the project [here](https://github.com/alternatefutures/alternate-clouds-sdk)
 2. Create your feature branch using our [branching strategy](#branching-strategy), e.g. `git checkout -b feat/my-new-feature`
 3. Run the tests: `pnpm test`
 4. Commit your changes by following our [commit conventions](#conventional-commits), e.g. `git commit -m 'chore: 🤖 my contribution description'`
