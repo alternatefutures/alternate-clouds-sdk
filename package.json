@@ -7,6 +7,7 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "default": "./dist/browser/index.js"
     },
     "./node": {
@@ -44,6 +45,7 @@
     "lint:check": "pnpm exec biome lint ./src",
     "transpile": "pnpm exec tsc -p tsconfig.json",
     "test": "vitest run --dir src",
+    "test:package": "node ./scripts/verify-package.mjs",
     "tsc": "tsc --noEmit",
     "watch": "tsc --watch",
     "docs:generate": "node scripts/generate-docs.mjs"
@@ -55,7 +57,7 @@
     "@web-std/form-data": "^3.0.2",
     "axios": "^1.7.2",
     "dotenv": "^16.0.3",
-    "files-from-path": "^1.0.0",
+    "files-from-path": "~1.0.4",
     "lodash": "^4.17.21",
     "luxon": "^3.3.0",
     "object-traversal": "^1.0.1",
