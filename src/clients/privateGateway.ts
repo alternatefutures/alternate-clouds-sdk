@@ -14,7 +14,7 @@ import {
   isPrivateGatewaysResponseQuery,
 } from '../utils/graphql';
 
-type PrivateGatewayClientOptions = {
+export type PrivateGatewayClientOptions = {
   graphqlClient: Client;
 };
 

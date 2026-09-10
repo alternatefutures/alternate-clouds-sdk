@@ -10,7 +10,7 @@ The Alternate Futures Cloud SDK provides an unified interface to help you quickl
 * ESM module for Web browser
 * CJS module for Node.js 
 
-Detailed example and API documentation can are [here](https://docs.alternatefutures.ai/).
+Detailed example and API documentation can are [here](https://docs.alternatefutures.ai/sdk).
 
 ## Overview
 
@@ -19,7 +19,7 @@ Detailed example and API documentation can are [here](https://docs.alternatefutu
   - [Code format](#code-format)
   - [Changeset](#changeset)
 * [🧸 Basic Usage](#basic-usage)
-* [📖 Docs](https://alternatefutures.ai/docs/sdk)
+* [📖 Docs](https://docs.alternatefutures.ai/sdk)
 * [🙏 Contributing](#contributing)
   - [Branching strategy](#branching-strategy)
   - [Contributing](#conventional-commits)

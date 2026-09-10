@@ -2,7 +2,7 @@ import { AuthorizationError } from '@alternatefutures/errors';
 
 import { AccessTokenService } from './AccessTokenService';
 
-type StaticAccessTokenServiceOptions = {
+export type StaticAccessTokenServiceOptions = {
   accessToken: string;
 };
 

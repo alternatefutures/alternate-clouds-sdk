@@ -32,7 +32,7 @@ export type Site = Pick<SiteWithRelations, 'id' | 'name' | 'slug'> & {
   primaryDomain?: Pick<DomainWithRelations, 'id' | 'hostname'>;
 };
 
-type SitesClientOptions = {
+export type SitesClientOptions = {
   graphqlClient: Client;
 };
 

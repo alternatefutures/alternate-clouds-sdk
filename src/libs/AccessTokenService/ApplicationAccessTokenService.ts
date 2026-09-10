@@ -6,7 +6,7 @@ import { DateTime } from 'luxon';
 import { getDefined } from '../../defined';
 import { AccessTokenService } from './AccessTokenService';
 
-type ApplicationAccessTokenServiceOptions = {
+export type ApplicationAccessTokenServiceOptions = {
   clientId: string;
   authAppsServiceUrl?: string;
   origin?: string;

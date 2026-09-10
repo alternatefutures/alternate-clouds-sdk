@@ -1,6 +1,6 @@
 import { Client } from '@alternatefutures/utils-genql-client';
 
-type UserClientOptions = {
+export type UserClientOptions = {
   graphqlClient: Client;
 };
 

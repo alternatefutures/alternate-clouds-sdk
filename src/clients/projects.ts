@@ -5,13 +5,13 @@ import {
 } from '@alternatefutures/utils-genql-client';
 import { File } from '@web-std/file';
 
-type ProjectsClientOptions = {
+export type ProjectsClientOptions = {
   graphqlClient: Client;
 };
 
-type CreateProjectArgs = { name: string };
+export type CreateProjectArgs = { name: string };
 
-type UpdateProjectArgs = {
+export type UpdateProjectArgs = {
   where: { id: string };
   data: {
     name?: string;
@@ -21,7 +21,7 @@ type UpdateProjectArgs = {
   };
 };
 
-type GetProjectArgs = { id: string };
+export type GetProjectArgs = { id: string };
 
 export type Project = Omit<
   ProjectWithRelations,

@@ -7,7 +7,7 @@ import {
   AFFunctionStatus,
 } from '@alternatefutures/utils-genql-client';
 
-type FunctionsClientOptions = {
+export type FunctionsClientOptions = {
   graphqlClient: Client;
 };
 

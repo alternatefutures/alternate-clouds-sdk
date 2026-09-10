@@ -151,7 +151,7 @@ export type CryptoPaymentRequest = {
   expiresAt: number;
 };
 
-type BillingClientOptions = {
+export type BillingClientOptions = {
   authServiceUrl: string;
   accessTokenService: AccessTokenService;
 };
