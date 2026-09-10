@@ -74,6 +74,19 @@ jobs:
       - name: Build package
         run: pnpm run build
 
+      # `pnpm run build` can exit 0 without bundling: `bun` resolves to the
+      # devDependency shim in node_modules/.bin, which is an empty placeholder
+      # when its postinstall did not run (pnpm 10 skips dependency build
+      # scripts by default). Never publish a dist/ that only holds .d.ts files.
+      - name: Verify build output
+        run: |
+          set -euo pipefail
+          test -s dist/node/index.js
+          test -s dist/browser/index.js
+          test -s dist/index.d.ts
+          grep -q "api.alternatefutures.ai/graphql" dist/node/index.js
+          echo "dist/ holds the node and browser bundles with the live hosts baked in."
+
       - name: Run tests
         run: pnpm test
 
