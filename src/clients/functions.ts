@@ -6,6 +6,7 @@ import {
   AFFunctionGenqlSelection,
   AFFunctionStatus,
 } from '@alternatefutures/utils-genql-client';
+
 export type FunctionsClientOptions = {
   graphqlClient: Client;
 };
@@ -18,7 +19,7 @@ export type GetAFFunctionArgs = {
 export type CreateAFFunctionArgs = {
   name: string;
   siteId?: string;
-  routes?: Record<string, string>;
+  routes?: Record<string, string> | null;
 };
 export type DeleteAFFunctionArgs = {
   id: string;
@@ -57,8 +58,9 @@ export class FunctionsClient {
     name: true,
     slug: true,
     invokeUrl: true,
-    routes: true,
     projectId: true,
+    // TODO: Re-enable when @alternatefutures/utils-genql-client v0.5.0 is published
+    // routes: true,
     currentDeploymentId: true,
     currentDeployment: {
       cid: true,
@@ -125,8 +127,8 @@ export class FunctionsClient {
         __args: {
           data: {
             name,
-            siteId,
-            routes,
+            siteId: siteId ?? null,
+            routes: routes ?? null,
           },
         },
         ...FunctionsClient.AFFunction_MAPPED_PROPERTIES,
@@ -144,7 +146,11 @@ export class FunctionsClient {
             functionId,
             cid,
           },
-          data: { sgx, blake3Hash, assetsCid },
+          data: {
+            sgx: sgx ?? null,
+            blake3Hash: blake3Hash ?? null,
+            assetsCid: assetsCid ?? null,
+          },
         },
         ...FunctionsClient.Deployment_MAPPED_PROPERTIES,
       },
@@ -177,10 +183,10 @@ export class FunctionsClient {
             id,
           },
           data: {
-            slug,
-            name,
-            routes,
-            status,
+            slug: slug ?? null,
+            name: name ?? null,
+            routes: routes !== undefined ? routes : null,
+            status: status ?? null,
           },
         },
         ...FunctionsClient.AFFunction_MAPPED_PROPERTIES,

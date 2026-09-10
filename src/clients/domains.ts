@@ -203,13 +203,16 @@ export class DomainsClient {
     return response.domainsByZoneId.data;
   };
 
+  /**
+   * @deprecated Use createCustomDomain instead for new domain creation with SSL support
+   */
   public createDomain = async ({
     zoneId,
     hostname,
   }: { zoneId: string; hostname: string }) => {
     const response = await this.graphqlClient.mutation({
-      __name: 'CreateDomain',
-      createDomain: {
+      __name: 'CreateDomainLegacy',
+      createDomainLegacy: {
         __args: {
           where: {
             zoneId,
@@ -225,7 +228,7 @@ export class DomainsClient {
       },
     });
 
-    return response.createDomain;
+    return response.createDomainLegacy;
   };
 
   public deleteDomain = async ({ domainId }: { domainId: string }) => {
@@ -233,9 +236,7 @@ export class DomainsClient {
       __name: 'DeleteDomain',
       deleteDomain: {
         __args: {
-          where: {
-            id: domainId,
-          },
+          id: domainId,
         },
         ...DomainsClient.DOMAIN_MAPPED_PROPERTIES,
       },
@@ -249,9 +250,7 @@ export class DomainsClient {
       __name: 'VerifyDomain',
       verifyDomain: {
         __args: {
-          where: {
-            id: domainId,
-          },
+          domainId,
         },
         ...DomainsClient.DOMAIN_MAPPED_PROPERTIES,
       },

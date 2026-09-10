@@ -112,8 +112,8 @@ export class ApplicationsClient {
         __args: {
           where: { id },
           data: {
-            name,
-            whitelistDomains,
+            name: name ?? null,
+            whitelistDomains: whitelistDomains ?? null,
             // Warning: The whiteLabelDomains has been deprecated
             // providing ephemeral retroactivity
             whiteLabelDomains: whitelistDomains ? [...whitelistDomains] : [],

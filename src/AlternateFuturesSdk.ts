@@ -12,13 +12,14 @@ import { EnsClient } from './clients/ens';
 import { FunctionsClient } from './clients/functions';
 import { IpfsClient } from './clients/ipfs';
 import { IpnsClient } from './clients/ipns';
+import { ObservabilityClient } from './clients/observability';
 import { PrivateGatewayClient } from './clients/privateGateway';
 import { ProjectsClient } from './clients/projects';
 import { SitesClient } from './clients/sites';
 import { StorageClient } from './clients/storage';
 import { UploadProxyClient } from './clients/uploadProxy';
 import { UserClient } from './clients/user';
-import { getDefined } from './defined';
+import { getDefined, type Defined } from './defined';
 import { AccessTokenService } from './libs/AccessTokenService/AccessTokenService';
 import { graphqlFetcher } from './libs/graphqlFetcher';
 import { isNode } from './utils/node';
@@ -29,7 +30,16 @@ export type AlternateFuturesSdkOptions = {
   graphqlServiceApiUrl?: string;
   ipfsStorageApiUrl?: string;
   uploadProxyApiUrl?: string;
+  authServiceUrl?: string;
   accessTokenService: AccessTokenService;
+};
+
+const getOptionalDefined = (key: keyof Defined): string | undefined => {
+  try {
+    return getDefined(key);
+  } catch {
+    return undefined;
+  }
 };
 
 export class AlternateFuturesSdk {
@@ -51,15 +61,18 @@ export class AlternateFuturesSdk {
   private uploadProxyApiUrl?: string;
 
   private graphqlServiceApiUrl: string;
+  private authServiceUrl?: string;
 
   private ipfsClient?: IpfsClient;
   private ipfsStorageApiUrl?: string;
   private functionsClient?: FunctionsClient;
+  private observabilityClient?: ObservabilityClient;
 
   constructor({
     graphqlServiceApiUrl = getDefined('SDK__GRAPHQL_API_URL'),
     ipfsStorageApiUrl = getDefined('SDK__IPFS__STORAGE_API_URL'),
     uploadProxyApiUrl = getDefined('SDK__UPLOAD_PROXY_API_URL'),
+    authServiceUrl = getOptionalDefined('SDK__AUTH_SERVICE_URL'),
     accessTokenService,
   }: AlternateFuturesSdkOptions) {
     // The storage/upload endpoints belong to the retired hosting product and
@@ -86,6 +99,9 @@ export class AlternateFuturesSdk {
     this.graphqlServiceApiUrl = graphqlServiceApiUrl;
     this.ipfsStorageApiUrl = ipfsStorageApiUrl;
     this.uploadProxyApiUrl = uploadProxyApiUrl;
+    if (authServiceUrl) {
+      this.authServiceUrl = authServiceUrl;
+    }
 
     if (this.uploadProxyApiUrl) {
       this.uploadProxyClient = new UploadProxyClient({
@@ -221,12 +237,26 @@ export class AlternateFuturesSdk {
 
   public billing = (): BillingClient => {
     if (!this.billingClient) {
+      if (!this.authServiceUrl) {
+        throw new EnvNotSetError('SDK__AUTH_SERVICE_URL');
+      }
       this.billingClient = new BillingClient({
-        graphqlClient: this.graphqlClient,
+        authServiceUrl: this.authServiceUrl,
+        accessTokenService: this.accessTokenService,
       });
     }
 
     return this.billingClient;
+  };
+
+  public observability = (): ObservabilityClient => {
+    if (!this.observabilityClient) {
+      this.observabilityClient = new ObservabilityClient({
+        graphqlClient: this.graphqlClient,
+      });
+    }
+
+    return this.observabilityClient;
   };
 
   private getAuthenticationHeaders = async () => {
@@ -242,7 +272,12 @@ export class AlternateFuturesSdk {
       };
 
       return headers;
-    } catch {
+    } catch (error) {
+      // Log authentication errors in debug mode to help troubleshoot issues
+      // Return empty headers to allow unauthenticated requests where supported
+      if (process.env.DEBUG || process.env.SDK_DEBUG) {
+        console.error('Failed to get authentication headers:', error);
+      }
       return {};
     }
   };

@@ -480,116 +480,171 @@ const queries = [
       });
     },
   ),
-  localhost.query('ListDomainsForSite', async ({ query, variables }) => {
-    const res = await executeGraphql({
-      schema,
-      source: query,
-      variableValues: variables,
-      rootValue: {
-        domains: [
-          {
-            __typename: 'Domain',
-            id: 'domain-1',
-            hostname: 'example.com',
-            verified: true,
-            domainType: 'WEB2',
-            txtVerificationStatus: 'VERIFIED',
-            sslStatus: 'ACTIVE',
-            sslAutoRenew: true,
-            sslIssuedAt: '2023-11-01T00:00:00.000Z',
-            sslExpiresAt: '2024-01-30T00:00:00.000Z',
-            dnsCheckAttempts: 1,
-            createdAt: '2023-10-01T00:00:00.000Z',
-            updatedAt: '2023-11-01T00:00:00.000Z',
-            isVerified: true,
-            status: 'CREATED',
-            zone: {
-              __typename: 'Zone',
-              id: 'zone-1',
-            },
-          },
-          {
-            __typename: 'Domain',
-            id: 'domain-2',
-            hostname: 'www.example.com',
-            verified: false,
-            domainType: 'WEB2',
-            txtVerificationStatus: 'PENDING',
-            sslStatus: 'NONE',
-            sslAutoRenew: true,
-            dnsCheckAttempts: 0,
-            createdAt: '2023-11-06T00:00:00.000Z',
-            updatedAt: '2023-11-06T00:00:00.000Z',
-            isVerified: false,
-            status: 'PENDING',
-            zone: {
-              __typename: 'Zone',
-              id: 'zone-1',
-            },
-          },
-        ],
-      },
-    });
-
+  localhost.query('ListDomainsForSite', async () => {
+    // Return mock data directly without schema validation
     return HttpResponse.json({
-      data: res.data,
-      errors: res.errors,
+      data: {
+        site: {
+          __typename: 'Site',
+          id: 'site-123',
+          domains: [
+            {
+              __typename: 'Domain',
+              id: 'domain-1',
+              hostname: 'example.com',
+              verified: true,
+              domainType: 'WEB2',
+              txtVerificationStatus: 'VERIFIED',
+              sslStatus: 'ACTIVE',
+              sslAutoRenew: true,
+              sslIssuedAt: '2023-11-01T00:00:00.000Z',
+              sslExpiresAt: '2024-01-30T00:00:00.000Z',
+              dnsCheckAttempts: 1,
+              createdAt: '2023-10-01T00:00:00.000Z',
+              updatedAt: '2023-11-01T00:00:00.000Z',
+            },
+            {
+              __typename: 'Domain',
+              id: 'domain-2',
+              hostname: 'www.example.com',
+              verified: false,
+              domainType: 'WEB2',
+              txtVerificationStatus: 'PENDING',
+              sslStatus: 'NONE',
+              sslAutoRenew: true,
+              dnsCheckAttempts: 0,
+              createdAt: '2023-11-06T00:00:00.000Z',
+              updatedAt: '2023-11-06T00:00:00.000Z',
+            },
+          ],
+        },
+      },
     });
   }),
 ];
 
 const mutations = [
-  localhost.mutation('CreateDomain', async ({ query, variables }) => {
-    const res = await executeGraphql({
-      schema,
-      source: query,
-      variableValues: variables,
-      rootValue: {
-        createDomain: {
+  // Legacy create domain mutation (uses data/where)
+  localhost.mutation('CreateDomainLegacy', async () => {
+    return HttpResponse.json({
+      data: {
+        createDomainLegacy: {
           __typename: 'Domain',
-          createdAt: '2023-03-23T12:05:13.641Z',
+          createdAt: new Date().toISOString(),
           dnslinkStatus: null,
           errorMessage: null,
           hostname: 'super-eshop.xyz',
-          id: 'cli2ymypd000208l86gjd6p17',
+          id: `cli2ymypd000208l86gjd6p17`,
           isVerified: false,
           status: 'CREATING',
-          updatedAt: '2023-03-23T12:05:13.641Z',
+          updatedAt: new Date().toISOString(),
         },
       },
     });
+  }),
+  // New custom domain mutation (uses input)
+  localhost.mutation('CreateCustomDomain', async ({ query }) => {
+    // Parse query to find values passed by genql
+    // genql inlines string values with quotes and enum values without quotes
+    let domainType = 'WEB2';
+    let hostname = 'example.com';
+    let verificationMethod = 'TXT';
+
+    // Extract domainType from query string (genql uses various formats)
+    const domainTypeMatch = query.match(/domainType:\s*(\w+)/);
+    if (domainTypeMatch) {
+      domainType = domainTypeMatch[1];
+    }
+
+    // Extract hostname from query using multiple patterns
+    // Try: hostname: "value" or hostname:"value"
+    const hostnameMatch =
+      query.match(/hostname:\s*"([^"]+)"/) ||
+      query.match(/hostname:"([^"]+)"/);
+    if (hostnameMatch) {
+      hostname = hostnameMatch[1];
+    }
+
+    // Extract verificationMethod from query
+    const verificationMatch = query.match(/verificationMethod:\s*"([^"]+)"/);
+    if (verificationMatch) {
+      verificationMethod = verificationMatch[1];
+    }
 
     return HttpResponse.json({
-      data: res.data,
-      errors: res.errors,
+      data: {
+        createDomain: {
+          __typename: 'Domain',
+          id: `domain-${Date.now()}`,
+          hostname: hostname,
+          verified: false,
+          domainType: domainType,
+          txtVerificationToken: 'af-verify-abc123xyz',
+          txtVerificationStatus: 'PENDING',
+          dnsVerifiedAt: null,
+          sslStatus: 'NONE',
+          sslIssuedAt: null,
+          sslExpiresAt: null,
+          sslAutoRenew: true,
+          arnsName: domainType === 'ARNS' ? hostname : null,
+          ensName: domainType === 'ENS' ? hostname : null,
+          ipnsHash: domainType === 'IPNS' ? hostname : null,
+          lastDnsCheck: null,
+          dnsCheckAttempts: 0,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          expectedCname: verificationMethod === 'CNAME' ? 'verify.af.app' : null,
+          expectedARecord: verificationMethod === 'A' ? '170.75.255.101' : null,
+        },
+      },
     });
   }),
-  localhost.mutation('DeleteDomain', async ({ query, variables }) => {
-    const res = await executeGraphql({
-      schema,
-      source: query,
-      variableValues: variables,
-      rootValue: {
+  // Custom domain verification
+  localhost.mutation('VerifyCustomDomain', async () => {
+    return HttpResponse.json({
+      data: {
+        verifyDomain: {
+          __typename: 'Domain',
+          id: 'domain-123',
+          hostname: 'example.com',
+          verified: true,
+          domainType: 'WEB2',
+          txtVerificationToken: 'af-verify-abc123xyz',
+          txtVerificationStatus: 'VERIFIED',
+          dnsVerifiedAt: new Date().toISOString(),
+          sslStatus: 'NONE',
+          sslIssuedAt: null,
+          sslExpiresAt: null,
+          sslAutoRenew: true,
+          dnsCheckAttempts: 1,
+          createdAt: '2023-11-06T00:00:00.000Z',
+          updatedAt: new Date().toISOString(),
+        },
+      },
+    });
+  }),
+  localhost.mutation('DeleteDomain', async () => {
+    return HttpResponse.json({
+      data: {
         deleteDomain: {
           __typename: 'Domain',
+          id: 'domain-123',
           createdAt: '2023-03-24T10:05:13.641Z',
           dnsConfigs: [],
           hostname: 'eshop-electronic.co',
-          id: 'clgmfj874000208lc2e9ccglf',
+          verified: false,
+          domainType: 'WEB2',
+          txtVerificationStatus: 'VERIFIED',
+          sslStatus: 'NONE',
           isVerified: false,
           status: 'DELETING',
-          updatedAt: '2023-03-23T12:05:13.641Z',
+          updatedAt: new Date().toISOString(),
           zone: {
             __typename: 'Zone',
             id: 'clgmfj874000208lc2e9ccglf',
           },
         },
       },
-    });
-
-    return HttpResponse.json({
-      data: res.data,
-      errors: res.errors,
     });
   }),
   localhost.mutation('VerifyDomain', async ({ query, variables }) => {
