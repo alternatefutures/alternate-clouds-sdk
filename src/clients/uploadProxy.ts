@@ -38,12 +38,12 @@ export type UploadProgress = {
   totalSize?: number;
 };
 
-type UploadProxyClientOptions = {
+export type UploadProxyClientOptions = {
   accessTokenService: AccessTokenService;
   uploadProxyApiUrl: string;
 };
 
-type UploadContentArgs = {
+export type UploadContentArgs = {
   getStream: () => ReadableStream<Block>;
   basename: string;
   parentFolderId?: string;
@@ -51,7 +51,7 @@ type UploadContentArgs = {
   onUploadProgress?: (uploadProgress: UploadProgress) => void;
 };
 
-type UploadPrivateContentArgs = {
+export type UploadPrivateContentArgs = {
   file: File;
   fileHash: string;
   onUploadProgress?: (uploadProgress: UploadProgress) => void;

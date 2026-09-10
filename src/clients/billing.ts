@@ -91,7 +91,7 @@ export type CurrentUsage = UsageRecord & {
   total: number;
 };
 
-type BillingClientOptions = {
+export type BillingClientOptions = {
   graphqlClient: Client;
 };
 

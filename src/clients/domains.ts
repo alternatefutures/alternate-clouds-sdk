@@ -16,7 +16,7 @@ import {
   isDomainsResponseQuery,
 } from '../utils/graphql';
 
-type DomainsClientOptions = {
+export type DomainsClientOptions = {
   graphqlClient: Client;
 };
 

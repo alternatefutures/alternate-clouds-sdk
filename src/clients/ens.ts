@@ -14,7 +14,7 @@ export type EnsRecord = Omit<EnsRecordWithRelations, 'site' | 'ipnsRecord'> & {
   };
 };
 
-type EnsClientOptions = {
+export type EnsClientOptions = {
   graphqlClient: Client;
 };
 

@@ -48,31 +48,31 @@ export type GetPinByFilenameArgs = PinByFilenameArgs;
 
 export type DeletePinArgs = PinByCidArgs;
 
-type StorageClientOptions = {
+export type StorageClientOptions = {
   graphqlClient: Client;
   uploadProxyClient: UploadProxyClient;
 };
 
-type UploadDirectoryArgs = {
+export type UploadDirectoryArgs = {
   path: string;
   parentFolderId?: string;
   options?: UploadContentOptions;
   onUploadProgress?: (uploadProgress: UploadProgress) => void;
 };
 
-type UploadPrivateFileArgs = {
+export type UploadPrivateFileArgs = {
   filePath: string;
   hashingAlhorithm?: 'sha256' | 'sha512' | 'blake3';
   onUploadProgress?: (uploadProgress: UploadProgress) => void;
 };
-type UploadFileArgs = {
+export type UploadFileArgs = {
   file: FileLike;
   parentFolderId?: string;
   options?: UploadContentOptions;
   onUploadProgress?: (uploadProgress: UploadProgress) => void;
 };
 
-type UploadVirtualDirectoryArgs = {
+export type UploadVirtualDirectoryArgs = {
   files: FileLike[];
   directoryName: string;
   parentFolderId?: string;

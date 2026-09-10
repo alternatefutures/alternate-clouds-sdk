@@ -25,7 +25,7 @@ import { isNode } from './utils/node';
 
 type Headers = Record<string, string>;
 
-type AlternateFuturesSdkOptions = {
+export type AlternateFuturesSdkOptions = {
   graphqlServiceApiUrl?: string;
   ipfsStorageApiUrl?: string;
   uploadProxyApiUrl?: string;

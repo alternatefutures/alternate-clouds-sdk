@@ -4,7 +4,7 @@ import {
   IpnsRecordGenqlSelection,
 } from '@alternatefutures/utils-genql-client';
 
-type IpnsClientOptions = {
+export type IpnsClientOptions = {
   graphqlClient: Client;
 };
 

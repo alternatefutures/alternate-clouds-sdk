@@ -14,7 +14,7 @@ export type Application = Omit<
   whiteLabelDomains: string[];
 };
 
-type ApplicationsClientOptions = {
+export type ApplicationsClientOptions = {
   graphqlClient: Client;
 };
 

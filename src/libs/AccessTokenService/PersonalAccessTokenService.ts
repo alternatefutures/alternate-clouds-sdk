@@ -6,7 +6,7 @@ import { graphqlFetcher } from '../graphqlFetcher';
 import { requireNodeEnv } from '../requireNodeEnv';
 import { AccessTokenService } from './AccessTokenService';
 
-type PersonalAccessTokenServiceOptions = {
+export type PersonalAccessTokenServiceOptions = {
   graphqlServiceApiUrl?: string;
   personalAccessToken: string;
   projectId?: string | undefined;
