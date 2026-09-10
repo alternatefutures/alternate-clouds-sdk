@@ -70,8 +70,8 @@ export class AlternateFuturesSdk {
 
   constructor({
     graphqlServiceApiUrl = getDefined('SDK__GRAPHQL_API_URL'),
-    ipfsStorageApiUrl = getDefined('SDK__IPFS__STORAGE_API_URL'),
-    uploadProxyApiUrl = getDefined('SDK__UPLOAD_PROXY_API_URL'),
+    ipfsStorageApiUrl = getOptionalDefined('SDK__IPFS__STORAGE_API_URL'),
+    uploadProxyApiUrl = getOptionalDefined('SDK__UPLOAD_PROXY_API_URL'),
     authServiceUrl = getOptionalDefined('SDK__AUTH_SERVICE_URL'),
     accessTokenService,
   }: AlternateFuturesSdkOptions) {
