@@ -1,0 +1,40 @@
+name: 📚 Notify docs (main is final)
+
+# Anything merged to main is final: tell the docs site so it regenerates the
+# SDK API reference and republishes. The docs workflow ("📚 Docs build
+# (Production)" in web-docs.alternatefutures.ai) listens for repository_dispatch
+# type `docs-update`.
+#
+# Transitional note (2026-09-10): the docs still generate the SDK reference from
+# `develop`, because `main` has been stale since 2025-12-29 and its
+# observability.ts breaks TypeDoc. Until main is fast-forwarded and the docs
+# workflow's SDK checkout is switched to `ref: main`, develop pushes are
+# notified too so the reference tracks what actually ships.
+#
+# Needs secret GH_PAT: a fine-grained token with Contents: read/write on
+# alternatefutures/web-docs.alternatefutures.ai.
+
+on:
+  push:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  notify-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send docs-update dispatch
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          if [ -z "$GH_PAT" ]; then
+            echo "::warning::GH_PAT secret missing; docs will not be notified. Add a fine-grained token with Contents: write on web-docs.alternatefutures.ai."
+            exit 0
+          fi
+          curl -sS -o /dev/null -w "dispatch http %{http_code}\n" -X POST \
+            -H "Authorization: Bearer $GH_PAT" \
+            -H "Accept: application/vnd.github+json" \
+            https://api.github.com/repos/alternatefutures/web-docs.alternatefutures.ai/dispatches \
+            -d "{\"event_type\":\"docs-update\",\"client_payload\":{\"source\":\"${GITHUB_REPOSITORY}\",\"ref\":\"${GITHUB_REF_NAME}\",\"sha\":\"${GITHUB_SHA}\"}}"

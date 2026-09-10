@@ -35,7 +35,7 @@ export type AlternateFuturesSdkOptions = {
 export class AlternateFuturesSdk {
   private accessTokenService: AccessTokenService;
   private graphqlClient: Client;
-  private uploadProxyClient: UploadProxyClient;
+  private uploadProxyClient?: UploadProxyClient;
 
   private userClient?: UserClient;
   private projectsClient?: ProjectsClient;
@@ -48,12 +48,12 @@ export class AlternateFuturesSdk {
   private billingClient?: BillingClient;
 
   private storageClient?: StorageClient;
-  private uploadProxyApiUrl: string;
+  private uploadProxyApiUrl?: string;
 
   private graphqlServiceApiUrl: string;
 
   private ipfsClient?: IpfsClient;
-  private ipfsStorageApiUrl: string;
+  private ipfsStorageApiUrl?: string;
   private functionsClient?: FunctionsClient;
 
   constructor({
@@ -62,14 +62,9 @@ export class AlternateFuturesSdk {
     uploadProxyApiUrl = getDefined('SDK__UPLOAD_PROXY_API_URL'),
     accessTokenService,
   }: AlternateFuturesSdkOptions) {
-    if (!ipfsStorageApiUrl) {
-      throw new EnvNotSetError('SDK__IPFS__STORAGE_API_URL');
-    }
-
-    if (!uploadProxyApiUrl) {
-      throw new EnvNotSetError('SDK__UPLOAD_PROXY_API_URL');
-    }
-
+    // The storage/upload endpoints belong to the retired hosting product and
+    // are only needed by ipfs() and storage(). They are resolved lazily there
+    // (EnvNotSetError at call time) instead of failing every construction.
     if (!accessTokenService) {
       throw new AuthorizationError();
     }
@@ -92,10 +87,20 @@ export class AlternateFuturesSdk {
     this.ipfsStorageApiUrl = ipfsStorageApiUrl;
     this.uploadProxyApiUrl = uploadProxyApiUrl;
 
-    this.uploadProxyClient = new UploadProxyClient({
-      uploadProxyApiUrl: this.uploadProxyApiUrl,
-      accessTokenService: this.accessTokenService,
-    });
+    if (this.uploadProxyApiUrl) {
+      this.uploadProxyClient = new UploadProxyClient({
+        uploadProxyApiUrl: this.uploadProxyApiUrl,
+        accessTokenService: this.accessTokenService,
+      });
+    }
+  }
+
+  /** Upload proxy client, or a clear error if SDK__UPLOAD_PROXY_API_URL was never set. */
+  private requireUploadProxyClient(): UploadProxyClient {
+    if (!this.uploadProxyClient) {
+      throw new EnvNotSetError('SDK__UPLOAD_PROXY_API_URL');
+    }
+    return this.uploadProxyClient;
   }
 
   public getVersion = async () => {
@@ -130,7 +135,7 @@ export class AlternateFuturesSdk {
 
     if (!this.ipfsClient) {
       this.ipfsClient = new IpfsClient({
-        uploadProxyClient: this.uploadProxyClient,
+        uploadProxyClient: this.requireUploadProxyClient(),
       });
     }
 
@@ -197,7 +202,7 @@ export class AlternateFuturesSdk {
     if (!this.storageClient) {
       this.storageClient = new StorageClient({
         graphqlClient: this.graphqlClient,
-        uploadProxyClient: this.uploadProxyClient,
+        uploadProxyClient: this.requireUploadProxyClient(),
       });
     }
 
