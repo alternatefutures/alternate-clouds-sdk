@@ -19,10 +19,17 @@ jobs:
       id-token: write # Required for npm provenance
     env:
       NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      SDK__AUTH_SERVICE_URL: "https://auth.service.alternatefutures.ai"
-      SDK__GRAPHQL_API_URL: "https://graphql.service.alternatefutures.ai/graphql"
-      SDK__IPFS__STORAGE_API_URL: "https://storage-ipfs.service.alternatefutures.ai"
-      SDK__UPLOAD_PROXY_API_URL: "https://uploads.service.alternatefutures.ai"
+      # Baked into dist/ at build time (src/defined.ts). These must be the LIVE
+      # hosts: the old *.service.alternatefutures.ai names no longer resolve to
+      # anything with a certificate (checked 2026-09-10), so a package built with
+      # them fails every request unless the user overrides the env.
+      SDK__AUTH_SERVICE_URL: "https://auth.alternatefutures.ai"
+      SDK__AUTH_APPS_URL: "https://auth.alternatefutures.ai"
+      SDK__GRAPHQL_API_URL: "https://api.alternatefutures.ai/graphql"
+      # Retired hosting-era endpoints. Only ipfs()/storage() use them; pointing
+      # them at the API host keeps construction working until they are removed.
+      SDK__IPFS__STORAGE_API_URL: "https://api.alternatefutures.ai"
+      SDK__UPLOAD_PROXY_API_URL: "https://api.alternatefutures.ai"
 
     steps:
       - name: Checkout repository
@@ -58,8 +65,27 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      # `pnpm run build` ends with `bun run ./build.ts`; the runner has no Bun.
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - name: Build package
         run: pnpm run build
+
+      # `pnpm run build` can exit 0 without bundling: `bun` resolves to the
+      # devDependency shim in node_modules/.bin, which is an empty placeholder
+      # when its postinstall did not run (pnpm 10 skips dependency build
+      # scripts by default). Never publish a dist/ that only holds .d.ts files.
+      - name: Verify build output
+        run: |
+          set -euo pipefail
+          test -s dist/node/index.js
+          test -s dist/browser/index.js
+          test -s dist/index.d.ts
+          grep -q "api.alternatefutures.ai/graphql" dist/node/index.js
+          echo "dist/ holds the node and browser bundles with the live hosts baked in."
 
       - name: Run tests
         run: pnpm test

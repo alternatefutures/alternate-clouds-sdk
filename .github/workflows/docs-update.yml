@@ -3,20 +3,14 @@ name: 📚 Notify docs (main is final)
 # Anything merged to main is final: tell the docs site so it regenerates the
 # SDK API reference and republishes. The docs workflow ("📚 Docs build
 # (Production)" in web-docs.alternatefutures.ai) listens for repository_dispatch
-# type `docs-update`.
-#
-# Transitional note (2026-09-10): the docs still generate the SDK reference from
-# `develop`, because `main` has been stale since 2025-12-29 and its
-# observability.ts breaks TypeDoc. Until main is fast-forwarded and the docs
-# workflow's SDK checkout is switched to `ref: main`, develop pushes are
-# notified too so the reference tracks what actually ships.
+# type `docs-update` and reads this repo's `main`.
 #
 # Needs secret GH_PAT: a fine-grained token with Contents: read/write on
 # alternatefutures/web-docs.alternatefutures.ai.
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
 
 permissions:
   contents: read
