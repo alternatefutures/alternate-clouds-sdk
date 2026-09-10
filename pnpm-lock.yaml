@@ -876,18 +876,22 @@ packages:
   '@web3-storage/blob-index@1.0.5':
     resolution: {integrity: sha512-mhzupWeRfxLljoULcagU++mOmQOriCBMKniUhsmrCXrtRV8voF7op/ymqix1f9uX1M5iB93YXcfxAVBwGWWKoA==}
     engines: {node: '>=16.15'}
+    deprecated: Web3.storage became storacha.network, please upgrade to @storacha/blob-index
 
   '@web3-storage/capabilities@18.1.0':
     resolution: {integrity: sha512-jgZtymt2jJtER3SPsE0yoRSf1BzNo1hQIir6hfY3QlooxTwdETzPbF1rBs5El7BCCMHhQfB9hiLRniTIhnX4wA==}
+    deprecated: Web3.storage became storacha.network, please upgrade to @storacha/capabilities
 
   '@web3-storage/data-segment@5.3.0':
     resolution: {integrity: sha512-zFJ4m+pEKqtKatJNsFrk/2lHeFSbkXZ6KKXjBe7/2ayA9wAar7T/unewnOcZrrZTnCWmaxKsXWqdMFy9bXK9dw==}
 
   '@web3-storage/filecoin-client@3.3.5':
     resolution: {integrity: sha512-3JFKnHFizlljRSJyyCdNN3Np4MN5riBvjAXweqNmu4s2sChMB8kopnCkAFoMeEom9r7ZAnBAkMO3Wacjs6Nlcw==}
+    deprecated: Web3.storage became storacha.network, please upgrade to @storacha/filecoin-client
 
   '@web3-storage/upload-client@17.1.4':
     resolution: {integrity: sha512-jfVEcF7bVouxPy7kd1K5m6BaKeFzcH9zyyWC0CArByWLnKhuPhZ7+ykry3lwn82JIFXbEtmI563ewNuAAibieg==}
+    deprecated: Web3.storage became storacha.network, please upgrade to @storacha/upload-client
 
   '@zxing/text-encoding@0.9.0':
     resolution: {integrity: sha512-U/4aVJ2mxI0aDNI8Uq0wEhMgY+u4CNtEb0om3+y3+niDAsoTCOB33UF0sxpzqzdqXLqmvc+vZyAt4O8pPdfkwA==}
@@ -2108,8 +2112,8 @@ packages:
     engines: {node: ^18.0.0 || >=20.0.0}
     hasBin: true
 
-  vite@5.4.19:
-    resolution: {integrity: sha512-qO3aKv3HoQC8QKiNSTuUM1l9o/XX3+c+VTgLHbJWHZGeTPVAg2XwazI9UWzoxjIJCGCV2zU60uqMzjeLZuULqA==}
+  vite@5.4.21:
+    resolution: {integrity: sha512-o5a9xKjbtuhY6Bi5S3+HvbRERmouabWbyUcpXXUA1u+GNUKoROi9byOJ8M0nHbHYHkYICiMlqxkg1KkYmm25Sw==}
     engines: {node: ^18.0.0 || >=20.0.0}
     hasBin: true
     peerDependencies:
@@ -2920,14 +2924,14 @@ snapshots:
       chai: 5.2.0
       tinyrainbow: 1.2.0
 
-  '@vitest/mocker@2.1.1(@vitest/spy@2.1.1)(msw@2.8.2(@types/node@22.15.17)(typescript@5.6.2))(vite@5.4.19(@types/node@22.15.17))':
+  '@vitest/mocker@2.1.1(@vitest/spy@2.1.1)(msw@2.8.2(@types/node@22.15.17)(typescript@5.6.2))(vite@5.4.21(@types/node@22.15.17))':
     dependencies:
       '@vitest/spy': 2.1.1
       estree-walker: 3.0.3
       magic-string: 0.30.17
     optionalDependencies:
       msw: 2.8.2(@types/node@22.15.17)(typescript@5.6.2)
-      vite: 5.4.19(@types/node@22.15.17)
+      vite: 5.4.21(@types/node@22.15.17)
 
   '@vitest/pretty-format@2.1.1':
     dependencies:
@@ -4329,7 +4333,7 @@ snapshots:
       cac: 6.7.14
       debug: 4.4.0
       pathe: 1.1.2
-      vite: 5.4.19(@types/node@22.15.17)
+      vite: 5.4.21(@types/node@22.15.17)
     transitivePeerDependencies:
       - '@types/node'
       - less
@@ -4341,7 +4345,7 @@ snapshots:
       - supports-color
       - terser
 
-  vite@5.4.19(@types/node@22.15.17):
+  vite@5.4.21(@types/node@22.15.17):
     dependencies:
       esbuild: 0.21.5
       postcss: 8.5.3
@@ -4353,7 +4357,7 @@ snapshots:
   vitest@2.1.1(@types/node@22.15.17)(msw@2.8.2(@types/node@22.15.17)(typescript@5.6.2)):
     dependencies:
       '@vitest/expect': 2.1.1
-      '@vitest/mocker': 2.1.1(@vitest/spy@2.1.1)(msw@2.8.2(@types/node@22.15.17)(typescript@5.6.2))(vite@5.4.19(@types/node@22.15.17))
+      '@vitest/mocker': 2.1.1(@vitest/spy@2.1.1)(msw@2.8.2(@types/node@22.15.17)(typescript@5.6.2))(vite@5.4.21(@types/node@22.15.17))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.1
       '@vitest/snapshot': 2.1.1
@@ -4368,7 +4372,7 @@ snapshots:
       tinyexec: 0.3.2
       tinypool: 1.0.2
       tinyrainbow: 1.2.0
-      vite: 5.4.19(@types/node@22.15.17)
+      vite: 5.4.21(@types/node@22.15.17)
       vite-node: 2.1.1(@types/node@22.15.17)
       why-is-node-running: 2.3.0
     optionalDependencies:
