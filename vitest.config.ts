@@ -6,7 +6,13 @@ export default defineConfig({
     coverage: {
       include: ['src/**'],
       all: true,
-      reporter: ['text', 'json-summary'],
+      reporter: ['text', 'json', 'json-summary', 'html'],
+      thresholds: {
+        lines: 50,
+        functions: 50,
+        branches: 50,
+        statements: 50,
+      },
     },
     snapshotFormat: {
       printBasicPrototype: true,
