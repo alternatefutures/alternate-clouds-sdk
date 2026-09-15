@@ -1,0 +1,45 @@
+name: Sync develop after main
+
+# Keeps `develop` from drifting behind `main`. A promotion PR merged with a
+# merge commit leaves develop exactly one commit behind (the merge commit), and
+# a hotfix pushed straight to main leaves it behind by that hotfix; nothing
+# used to catch develop up, so "N behind" accumulated (2026-09-12: api 2,
+# web-app 5, cli 20). This runs on every push to main and fast-forwards
+# develop when develop has nothing unpromoted; otherwise it merges main into
+# develop. Never a force-push, never a rewrite. Pushes made with GITHUB_TOKEN
+# do not start other workflows, so the staging deploy does not re-run for a
+# sync.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: sync-develop
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: develop
+          fetch-depth: 0
+
+      - name: Fast-forward develop to main, or merge main into develop
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git fetch origin main develop
+          if git merge --ff-only origin/main; then
+            echo "develop fast-forwarded to $(git rev-parse --short origin/main)"
+          else
+            git merge --no-ff --no-edit \
+              -m "chore: merge main into develop after promotion" origin/main
+            echo "develop had unpromoted commits; merged main into develop"
+          fi
+          git push origin HEAD:develop
