@@ -54,6 +54,24 @@ export function validateScope(scope: ArchiveScope): void {
   binding(scope.applicationId);
 }
 export function executionContext(value: ArchiveExecutionContext): void {
+  // Existing non-archive SDK clients retain their older Node support. These
+  // new key-bearing helpers require unflagged WebCrypto in ordinary files.
+  const nodeVersion = (
+    globalThis as { process?: { versions?: { node?: string } } }
+  ).process?.versions?.node;
+  if (nodeVersion) {
+    const [major = 0, minor = 0] = nodeVersion.split('.').map(Number);
+    assert(
+      major > 20 || (major === 20 && minor >= 17),
+      'archive_node_20_17_required',
+    );
+  }
+  assert(
+    typeof globalThis.crypto !== 'undefined' &&
+      !!globalThis.crypto.subtle &&
+      typeof globalThis.crypto.getRandomValues === 'function',
+    'archive_webcrypto_required',
+  );
   assert(
     value === 'operator' || value === 'trusted-backend',
     'trusted_execution_context_required',
@@ -130,6 +148,11 @@ export function validateSpec(spec: ArchiveSpec): ArchiveSpec {
   assert(
     objects.reduce((sum, o) => sum + o.size, 0) <= ARCHIVE_LIMITS.bundleBytes,
     'bundle_too_large',
+  );
+  const manifest = objects.find((o) => o.id === spec.manifestObjectId);
+  assert(
+    manifest && manifest.size <= ARCHIVE_LIMITS.manifestBytes,
+    'manifest_too_large',
   );
   const result = { ...spec, objects };
   assert(

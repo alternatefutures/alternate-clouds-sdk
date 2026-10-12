@@ -99,6 +99,23 @@ async function mockPlayback({
 }
 
 describe('private archive supported encryptor and recovery', () => {
+  it('rejects older Node runtimes before generating keys or writing ciphertext', async () => {
+    const descriptor = Object.getOwnPropertyDescriptor(
+      process.versions,
+      'node',
+    );
+    if (!descriptor) throw new Error('node_version_descriptor_missing');
+    try {
+      Object.defineProperty(process.versions, 'node', {
+        ...descriptor,
+        value: '18.18.2',
+      });
+      await expect(prepare()).rejects.toThrow('archive_node_20_17_required');
+    } finally {
+      Object.defineProperty(process.versions, 'node', descriptor);
+    }
+  });
+
   it.each([
     'audio/mpegurl',
     'audio/x-mpegurl',
@@ -176,6 +193,22 @@ describe('private archive supported encryptor and recovery', () => {
         'private plaintext canary',
       );
     expect(validatePreparedArchive(prepared)).toEqual(prepared);
+  });
+  it('rejects file/directory collisions during preparation in either order but preserves distinct prefixes', async () => {
+    for (const paths of [
+      ['a', 'a/b'],
+      ['a/b', 'a'],
+      ['a-c', 'a/b', 'a'],
+      ['a', 'a-c', 'a/b'],
+    ]) {
+      await expect(
+        prepare(paths.map((path) => source(path, 'x'))),
+      ).rejects.toThrow('file_directory_collision');
+    }
+    const fixture = await prepare([source('a', 'one'), source('ab/c', 'two')]);
+    const recovered = recovery(fixture);
+    await recoverArchive(recovered.options);
+    expect([...recovered.output.keys()].sort()).toEqual(['a', 'ab/c']);
   });
   it('recovers all authenticated files, hashes and lengths and erases callback plaintext buffers', async () => {
     const fixture = await prepare([
@@ -490,6 +523,69 @@ describe('bounded authenticated archive HTTP client', () => {
       accessTokenService: { getAccessToken: async () => 'test-token' },
       fetch,
     });
+  it('admits the complete 4096-object inventory and protected descriptor within the JSON bound', async () => {
+    const fixture = await prepare();
+    const prepared = structuredClone(fixture.prepared);
+    prepared.spec.objects = Array.from(
+      { length: ARCHIVE_LIMITS.objects },
+      (_, i) => ({
+        id: `00000000-0000-4000-8000-${i.toString(16).padStart(12, '0')}`,
+        size:
+          i === 0
+            ? ARCHIVE_LIMITS.manifestBytes
+            : ARCHIVE_LIMITS.ciphertextChunkBytes,
+        sha256: 'f'.repeat(64),
+      }),
+    );
+    prepared.spec.manifestObjectId = '00000000-0000-4000-8000-000000000000';
+    prepared.spec.maxWinc = '9'.repeat(30);
+    prepared.spec.sourceExpiresAt = '+275760-09-13T00:00:00.000Z';
+    prepared.scope = {
+      organizationId: 'o'.repeat(128),
+      projectId: 'p'.repeat(128),
+      applicationId: 'a'.repeat(128),
+    };
+    prepared.inventoryDigest = inventoryDigest(
+      prepared.scope,
+      prepared.archiveId,
+      prepared.spec,
+    );
+    const bytes = encoder.encode(JSON.stringify(prepared)).length;
+    expect(bytes).toBeGreaterThan(512 * 1024);
+    expect(bytes).toBeLessThan(ARCHIVE_LIMITS.jsonBytes);
+    expect(validatePreparedArchive(prepared)).toEqual(prepared);
+    const fetch = vi.fn(async (_url, init) => {
+      expect(encoder.encode(String(init.body)).length).toBeLessThan(
+        ARCHIVE_LIMITS.jsonBytes,
+      );
+      expect(JSON.parse(String(init.body)).objects).toHaveLength(4096);
+      return new Response('{}');
+    });
+    await client(fetch).create(prepared.archiveId, prepared.spec);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    prepared.spec.objects.push({
+      id: '00000000-0000-4000-8000-ffffffffffff',
+      size: 29,
+      sha256: 'f'.repeat(64),
+    });
+    await expect(
+      client(fetch).create(prepared.archiveId, prepared.spec),
+    ).rejects.toThrow('invalid_inventory');
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+  it('rejects an encrypted manifest beyond its separate four MiB bound before sending', async () => {
+    const { prepared } = await prepare();
+    const manifest = prepared.spec.objects.find(
+      (o) => o.id === prepared.spec.manifestObjectId,
+    );
+    if (!manifest) throw new Error('fixture_missing');
+    manifest.size = ARCHIVE_LIMITS.manifestBytes + 1;
+    const fetch = vi.fn();
+    await expect(
+      client(fetch).create(prepared.archiveId, prepared.spec),
+    ).rejects.toThrow('manifest_too_large');
+    expect(fetch).not.toHaveBeenCalled();
+  });
   it('uses exact routes, a fresh existing bearer token, no redirects/cache, ciphertext only and no automatic retries', async () => {
     const fixture = await prepare();
     const requests: { url: string; init: RequestInit }[] = [];

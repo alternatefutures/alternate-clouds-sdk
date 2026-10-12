@@ -1,5 +1,7 @@
 # Private archive SDK — implementation preview
 
+The new key-bearing archive helpers require **Node.js 20.17 or later**, or WebCrypto in a trusted secure browser tool. They reject older Node runtimes before handling keys. Other existing SDK clients keep their package-level runtime support. Attendees must never receive archive keys.
+
 The archive helpers prepare encrypted bundles, reconstruct complete archives, and support authorized delivery from a trusted application backend. Import them from `@alternatefutures/sdk/archives` in the version containing this change. This implementation is unreleased; it does not make permanent archive writes available. Clouds currently reports `available: false` because the provider credit-share control upload has no verified hard fee bound (`provider_control_cost_unverified`). No real-provider recovery or paid exercise is claimed.
 
 Archive keys belong to the application or a privileged recovery operator. Never send a key, key-bearing bundle or decrypt-capable handle to an attendee/browser. A key holder can decrypt public ciphertext independently of SDK checks. Browser WebCrypto support is for trusted tooling, not an authorization boundary.
@@ -36,10 +38,14 @@ Use existing Clouds credentials and current project access; each archive operati
 | `iterateReceipts(archiveId)` | Async iterator over object entries across bounded pages. |
 | `getObject(archiveId, objectId)` | Whole confirmed ciphertext; no direct byte ranges. |
 | `recovery(archiveId, report)` | Submit complete application-attested recovery evidence. |
-| `cancel(archiveId)` | Durable authority cancellation; uncertain tombstone persistence stays denied/pending. |
-| `reconcile(archiveId, request)` | `{ objectId, receipt }` or `{ retryConfirmation: true }`; never resubmit an uncertain upload. |
+| `cancel(archiveId)` | Current cancellation permission is checked before mutation, then again for durable commit; uncertain commit stays denied/pending. |
+| `reconcile(archiveId, request)` | Exactly one of `{ objectId, receipt }`, `{ fundingReceipt }`, `{ retryConfirmation: true }`, or `{ resume: true }`; never repeat a consumed submission. |
 
 Inspect state and `nextCursor` rather than treating the first status page as the whole inventory. `ACCEPTED` is a receipt, `CONFIRMED` adds trusted gateway observations plus local ciphertext size/hash checks, and `RECOVERED` is application-attested reconstruction. None is a local chain proof. `UNKNOWN` requires operator evidence, not retrying upload with a new ID. V1 full-cap lifetime reservations never recycle on cancellation, expiry or apparent unused credits.
+
+Funding receipt import records exact evidence for the known funding transaction/share; it does not resume work. Explicit `resume: true` may queue only unattempted objects after every attempted outcome is resolved, with the original signer/share/cap, live source/staging/grant, sufficient approved credits and fresh initiating-actor authority. It remains blocked by the provider write gate in this build. Receipt import, read-only confirmation retry and resume are mutually exclusive request shapes. The SDK does not obtain human spend/permanence consent for a caller; applications must establish that before requesting any future enabled resume.
+
+Cancellation first obtains a read-only signed `cancel` intent, records local denial, then obtains a freshly authorized signed `cancel` commit. Both phases require current cancellation permission. Inspect-only permission cannot mutate an archive; uncertain commit remains `CANCEL_PENDING`. The public `cancel()` API sends no phase selector.
 
 ## Synthetic offline round trip
 
@@ -119,7 +125,7 @@ Reauthorize every chunk, manifest and chat page. At most one 4 MiB plaintext chu
 
 ## Limits and release evidence
 
-`ARCHIVE_VERSION` is `af.private-archive.v1`. Limits are 4 MiB plaintext chunks, 4 MiB + 28 ciphertext objects, 4 MiB encrypted manifest (plaintext manifest ≤4 MiB − 28), 4,096 objects including manifest, total ciphertext ≤16 GiB + 4,096 × 28, and 512 KiB JSON. Structured HLS/VTT/transcript/chat validation is bounded to 4 MiB per file. API status/receipt pages are bounded; use the iterator rather than accumulating all receipt bodies for large bundles.
+`ARCHIVE_VERSION` is `af.private-archive.v1`. Limits are 4 MiB plaintext chunks, 4 MiB + 28 ciphertext objects, 4 MiB encrypted manifest (plaintext manifest ≤4 MiB − 28), 4,096 objects including manifest, total ciphertext ≤16 GiB + 4,096 × 28, and 1 MiB JSON. Structured HLS/VTT/transcript/chat validation is bounded to 4 MiB per file. API status/receipt pages are bounded; use the iterator rather than accumulating all receipt bodies for large bundles.
 
 The local synthetic fixture tests include media reconstruction/seek validation, but no provider permanence, billing, live permission adapter or application delivery integration was exercised. Clouds #356 requires reviewed versioned releases and a separately authorized real-provider/recovery exercise. Olivier events #84 remains blocked. Keep source hot copies and existing retention unchanged.
 
@@ -136,3 +142,5 @@ pnpm build
 ```
 
 These are synthetic/local verification steps; they do not authorize permanent uploads or prove provider billing/confirmation or an application's attendee delivery integration.
+
+At the 12 October 2026 working-tree verification snapshot, the archive-focused tests passed. See the final review evidence for exact counts and source identities. The broader SDK suite reported seven existing function-route failures; it was not fully green. Exact final commit/release validation remains separate.

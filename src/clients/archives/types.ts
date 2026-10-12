@@ -7,7 +7,7 @@ export const ARCHIVE_LIMITS = Object.freeze({
   ciphertextChunkBytes: 4 * 1024 * 1024 + 28,
   manifestBytes: 4 * 1024 * 1024,
   objects: 4096,
-  jsonBytes: 512 * 1024,
+  jsonBytes: 1024 * 1024,
   bundleBytes: 16 * 1024 ** 3 + 4096 * 28,
 });
 export interface ArchiveScope {

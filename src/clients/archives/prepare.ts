@@ -114,6 +114,18 @@ export async function prepareArchive(
   };
   const objects: CipherObject[] = [];
   const paths = new Set<string>();
+  // Keep only file paths, not every directory prefix of each long path.
+  const orderedPaths: string[] = [];
+  const pathPosition = (path: string): number => {
+    let low = 0;
+    let high = orderedPaths.length;
+    while (low < high) {
+      const middle = Math.floor((low + high) / 2);
+      if ((orderedPaths[middle] ?? '') < path) low = middle + 1;
+      else high = middle;
+    }
+    return low;
+  };
   let totalCiphertextBytes = 0;
   const save = async (plaintext: Uint8Array): Promise<CipherObject> => {
     assert(objects.length < ARCHIVE_LIMITS.objects, 'too_many_objects');
@@ -140,6 +152,17 @@ export async function prepareArchive(
       !paths.has(file.path) && paths.size < ARCHIVE_LIMITS.objects,
       'invalid_file_inventory',
     );
+    const prefix = `${file.path}/`;
+    assert(
+      !orderedPaths[pathPosition(prefix)]?.startsWith(prefix),
+      'file_directory_collision',
+    );
+    const parts = file.path.split('/');
+    for (let i = 1; i < parts.length; i++) {
+      const parent = parts.slice(0, i).join('/');
+      assert(!paths.has(parent), 'file_directory_collision');
+    }
+    orderedPaths.splice(pathPosition(file.path), 0, file.path);
     paths.add(file.path);
     const item: ArchiveManifestFile = {
       path: file.path,
