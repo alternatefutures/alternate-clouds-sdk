@@ -16,6 +16,11 @@
     "./browser": {
       "types": "./dist/index.d.ts",
       "default": "./dist/browser/index.js"
+    },
+    "./archives": {
+      "types": "./dist/clients/archives/index.d.ts",
+      "node": "./dist/node/archives.js",
+      "default": "./dist/browser/archives.js"
     }
   },
   "files": [

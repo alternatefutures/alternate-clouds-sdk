@@ -41,3 +41,6 @@ export type {
   CurrentUsage,
   UsageMetric,
 } from './clients/billing';
+
+// Private archives: key-bearing helpers are trusted-backend/operator-only.
+export * from './clients/archives';
