@@ -18,7 +18,7 @@ const external = [
 const requiredBuilds: BuildHandlerArgs[] = [
   {
     external,
-    entryPoints: ['src/index.ts'],
+    entryPoints: { index: 'src/index.ts', archives: 'src/clients/archives/index.ts' },
     platform: 'node',
     format: 'cjs',
     define: {
@@ -35,7 +35,7 @@ const requiredBuilds: BuildHandlerArgs[] = [
   },
   {
     external,
-    entryPoints: ['src/index.ts'],
+    entryPoints: { index: 'src/index.ts', archives: 'src/clients/archives/index.ts' },
     platform: 'browser',
     format: 'esm',
     target: 'es2020',
